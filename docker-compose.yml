@@ -1,0 +1,35 @@
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf # Mount custom Nginx configuration
+      - ./html:/usr/share/nginx/html # Mount static content
+    restart: unless-stopped
+    networks:
+      - backend
+    deploy:
+      replicas: 3
+  fcgi:
+    build: .
+    networks:
+      - backend
+    deploy:
+      replicas: 3
+#  httpd:
+#    image: httpd:2.4.62
+#    depends_on:
+#      - fcgi
+#    ports:
+#      - "8080:80"
+#    volumes:
+#      - ./httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+#      - ./src/main/resources/static:/var/www:ro
+#    networks:
+#      - backend
+
+networks:
+  backend:
+    driver: bridge
