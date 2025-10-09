@@ -1,0 +1,37 @@
+name: Deploy to Helios
+
+on:
+  workflow_run:
+    workflows: [Docker Compose CI]
+    types: [completed]
+
+jobs:
+  on-success:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Push to Helios
+        env:
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          ./gradlew build
+          scp -P $SSH_PORT -i private_key.pem httpd-helios.conf $SSH_HOST:~/httpd-root/conf/httpd.conf
+          scp -P $SSH_PORT -i private_key.pem build/libs/labwork1.jar $SSH_HOST:~/httpd-root/fcgi-bin/app.jar
+          scp -P $SSH_PORT -i private_key.pem -r src/main/resources/static/* $SSH_HOST:~/.www/
+          ssh -p $SSH_PORT -o StrictHostKeyChecking=no -i private_key.pem $SSH_HOST <<EOF
+            pkill java
+            pkill httpd
+            httpd -f ~/httpd-root/conf/httpd.conf -k start
+            java -DFCGI_PORT=8087 -jar ~/httpd-root/fcgi-bin/app.jar &
+            disown -a
+          EOF
+          rm -f private_key.pem
+      permissions:
+        contents: read
+        actions: write
+        id-token: write
+
