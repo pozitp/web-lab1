@@ -30,8 +30,8 @@ jobs:
             disown -a
           EOF
           rm -f private_key.pem
-      permissions:
-        contents: read
-        actions: write
-        id-token: write
+    permissions:
+      contents: read
+      actions: write
+      id-token: write
 
