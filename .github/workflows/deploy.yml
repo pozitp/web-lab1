@@ -8,6 +8,7 @@ on:
 jobs:
   on-success:
     runs-on: ubuntu-latest
+    uses: actions/checkout@v4
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Push to Helios
@@ -18,6 +19,8 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
+          ls
+          pwd
           ./gradlew build
           scp -P $SSH_PORT -i private_key.pem httpd-helios.conf $SSH_HOST:~/httpd-root/conf/httpd.conf
           scp -P $SSH_PORT -i private_key.pem build/libs/labwork1.jar $SSH_HOST:~/httpd-root/fcgi-bin/app.jar
