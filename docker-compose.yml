@@ -16,8 +16,6 @@ services:
     build: .
     networks:
       - backend
-    deploy:
-      replicas: 3
   httpd:
     image: httpd:2.4.62
     depends_on:

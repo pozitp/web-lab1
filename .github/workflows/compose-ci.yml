@@ -22,7 +22,7 @@ jobs:
         docker compose build -q
         docker compose up -d
         sleep 10
-        if docker compose ps --all --filter status=exited 2>/dev/null | greq -q "Exit"; then echo "Error: Not all containers are running" >&2; docker compose ps --all; docker compose down; exit 1; else echo "All containers are running."; fi
+        if docker compose ps --all --filter status=exited 2>/dev/null | grep -q "Exit"; then echo "Error: Not all containers are running" >&2; docker compose ps --all; docker compose down; exit 1; else echo "All containers are running."; fi
         docker compose down
 
 
