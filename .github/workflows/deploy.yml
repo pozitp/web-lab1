@@ -40,5 +40,6 @@ jobs:
             pkill httpd
             httpd -f ~/httpd-root/conf/httpd.conf -k start
             nohup java -DFCGI_PORT=8087 -XX:MaxHeapSize=1G -XX:MaxMetaspaceSize=128m -jar ~/httpd-root/fcgi-bin/app.jar &
+            exit
           EOF
 
