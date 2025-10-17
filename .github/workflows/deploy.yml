@@ -42,8 +42,11 @@ jobs:
               kill $(cat ~/run/app.pid) || true
               sleep 1
             fi
-            pkill -u "$USER" httpd || true
-            httpd -f ~/httpd-root/conf/httpd.conf -k start
+            if [ -f ~/run/httpd.pid ]; then
+              kill $(cat ~/run/httpd.pid) || true
+              sleep 1
+            fi
+            daemon -p ~/run/httpd.pid -o ~/logs/httpd.log -f httpd -f ~/httpd-root/conf/httpd.conf
             daemon -r -f -p ~/run/app.pid -o ~/logs/app.log \
               java -DFCGI_PORT=8087 -XX:MaxHeapSize=1G -XX:MaxMetaspaceSize=128m \
               -jar ~/httpd-root/fcgi-bin/app.jar || true
