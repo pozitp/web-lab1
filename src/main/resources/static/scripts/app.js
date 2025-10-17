@@ -190,7 +190,7 @@
 
         if (!rawX || !/^[-+]?\d+(\.\d+)?$/.test(rawX)) {
             errors.push("Введите числовое значение X.");
-        } else if (Number(rawX) < -3 || Number(rawX) > 5) { // Corrected line
+        } else if (Number(rawX) < -3 || Number(rawX) > 5) {
             errors.push("X должен находиться в диапазоне (-3 ... 5).");
         }
 
@@ -261,7 +261,6 @@
                 `<br>Время ответа: <strong>${escapeHtml(formatTimestamp(currentTime))}</strong>, обработка: <strong>${formatNumber(processingTimeMs)}</strong> мс.`;
         }
 
-        // Merge server history with localStorage to preserve all past entries across pods/sessions
         const local = (() => {
             try {
                 const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
