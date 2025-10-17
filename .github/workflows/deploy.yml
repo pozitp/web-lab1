@@ -36,10 +36,17 @@ jobs:
           scp -P $SSH_PORT build/libs/labwork1.jar $SSH_HOST:~/httpd-root/fcgi-bin/app.jar
           scp -P $SSH_PORT -r src/main/resources/static/* $SSH_HOST:~/.www/
           ssh -p $SSH_PORT $SSH_HOST << 'EOF'
-            pkill java
-            pkill httpd
+            set -e
+            mkdir -p ~/httpd-root/fcgi-bin ~/httpd-root/conf ~/.www ~/run ~/logs
+            if [ -f ~/run/app.pid ] && kill -0 $(cat ~/run/app.pid) 2>/dev/null; then
+              kill $(cat ~/run/app.pid) || true
+              sleep 1
+            fi
+            pkill -u "$USER" httpd || true
             httpd -f ~/httpd-root/conf/httpd.conf -k start
-            nohup java -DFCGI_PORT=8087 -XX:MaxHeapSize=1G -XX:MaxMetaspaceSize=128m -jar ~/httpd-root/fcgi-bin/app.jar &
+            daemon -r -f -p ~/run/app.pid -o ~/logs/app.log \
+              java -DFCGI_PORT=8087 -XX:MaxHeapSize=1G -XX:MaxMetaspaceSize=128m \
+              -jar ~/httpd-root/fcgi-bin/app.jar
             exit
           EOF
 

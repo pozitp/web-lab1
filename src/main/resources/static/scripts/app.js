@@ -19,6 +19,7 @@
     const BASE_POINT_RADIUS = 3;
     const LATEST_POINT_RADIUS = 4.8;
 
+
     initTheme();
     initRipples();
     restoreHistoryFromStorage();
@@ -26,12 +27,14 @@
 
     xInput.addEventListener("input", () => {
         const sanitized = xInput.value.replace(/[^0-9.,\-]/g, "");
+
         if (sanitized !== xInput.value) {
             xInput.value = sanitized;
         }
     });
 
     form.addEventListener("submit", async (event) => {
+
         event.preventDefault();
         errorBox.textContent = "";
 
@@ -46,11 +49,13 @@
         try {
             const response = await fetch(form.action, {
                 method: "POST",
+
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                     "Accept": "application/json"
                 },
                 body: new URLSearchParams({
+
                     x: validation.data.x,
                     y: validation.data.y,
                     r: validation.data.r
@@ -58,8 +63,10 @@
             });
 
             if (!response.ok) {
+
                 throw new Error(`Сервер вернул статус ${response.status}`);
             }
+
 
             const payload = await response.json();
             handleResponse(payload);
@@ -83,25 +90,32 @@
         });
     }
 
+
     function scheduleAppMounted() {
         if (bodyEl.classList.contains("app-mounted")) {
             return;
         }
         const delay = prefersReducedMotion.matches ? 0 : 560;
+
         window.setTimeout(() => bodyEl.classList.add("app-mounted"), delay);
     }
 
     function initTheme() {
+
         const storedTheme = (() => {
             try {
                 return localStorage.getItem(themeStorageKey);
+
             } catch (err) {
                 return null;
             }
         })();
         const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+
         const initialTheme = storedTheme === "dark" || storedTheme === "light" ? storedTheme : (prefersDark ? "dark" : "light");
+
         applyTheme(initialTheme);
+
     }
 
     function applyTheme(theme) {
@@ -112,6 +126,7 @@
         }
         if (!prefersReducedMotion.matches && themeAnimationReady) {
             triggerThemeTransition();
+
         }
         themeAnimationReady = true;
     }
@@ -126,16 +141,19 @@
         });
     }
 
+
     function createRipple(event) {
         const host = event.currentTarget;
         const rect = host.getBoundingClientRect();
         const ripple = document.createElement("span");
         ripple.className = "ripple";
         const size = Math.max(rect.width, rect.height);
+
         ripple.style.width = ripple.style.height = `${size}px`;
         ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
         ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
         host.appendChild(ripple);
+
         ripple.addEventListener("animationend", () => ripple.remove());
     }
 
@@ -150,11 +168,13 @@
         try {
             const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
             if (!raw) {
+
                 return;
             }
             const stored = JSON.parse(raw);
             if (Array.isArray(stored) && stored.length > 0) {
                 renderHistory(stored, { animateNew: false });
+
             }
         } catch (err) {
             console.warn('Не удалось восстановить историю из localStorage', err);
@@ -162,16 +182,16 @@
     }
 
     function validateForm() {
+
         const errors = [];
         const rawX = xInput.value.trim().replace(",", ".");
         const rawY = ySelect.value;
         const selectedR = form.querySelector("input[name='r']:checked");
 
-        const x = Number(rawX);
-        if (rawX.length === 0 || Number.isNaN(x)) {
+        if (!rawX || !/^[-+]?\d+(\.\d+)?$/.test(rawX)) {
             errors.push("Введите числовое значение X.");
-        } else if (x < -3 || x > 5) {
-            errors.push("X должен находиться в диапазоне от -3 до 5.");
+        } else if (Number(rawX) < -3 || Number(rawX) > 5) { // Corrected line
+            errors.push("X должен находиться в диапазоне (-3 ... 5).");
         }
 
         const y = Number(rawY);
@@ -198,31 +218,42 @@
         return {
             valid: true,
             message: "",
+
             data: {
-                x: x.toString(),
-                y: y.toString(),
+
+                x: rawX,
+                y: rawY,
                 r
             }
         };
     }
 
     function handleResponse(payload) {
+
         if (!payload || typeof payload !== "object") {
             errorBox.textContent = 'Ответ сервера имеет неизвестный формат.';
             return;
         }
 
         if (payload.status === "error") {
-            errorBox.textContent = payload.message || "Сервер сообщил об ошибке.";
+            if (Array.isArray(payload.errors) && payload.errors.length > 0) {
+                errorBox.textContent = payload.errors.join(" \u2022 ");
+            } else {
+                errorBox.textContent = payload.message || "Сервер сообщил об ошибке.";
+            }
             if (Array.isArray(payload.history)) {
                 renderHistory(payload.history, { animateNew: false });
                 persistHistory(payload.history);
             }
+
             toggleResultBox(false);
             return;
+
         }
 
+
         if (payload.status === "ok" && payload.data) {
+
             toggleResultBox(true);
             const { x, y, r, hit, currentTime, processingTimeMs } = payload.data;
             const hitText = hit ? 'точка попадает' : 'точка не попадает';
@@ -230,13 +261,28 @@
                 `<br>Время ответа: <strong>${escapeHtml(formatTimestamp(currentTime))}</strong>, обработка: <strong>${formatNumber(processingTimeMs)}</strong> мс.`;
         }
 
-        if (Array.isArray(payload.history)) {
-            renderHistory(payload.history, { animateNew: true });
-            persistHistory(payload.history);
-        } else {
-            persistHistory([]);
-        }
+        // Merge server history with localStorage to preserve all past entries across pods/sessions
+        const local = (() => {
+            try {
+                const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : [];
+            } catch { return []; }
+        })();
+        const incoming = Array.isArray(payload.history) ? payload.history : [];
+        const mergedMap = new Map();
+        const put = (rec) => {
+            if (!rec) return;
+            mergedMap.set(buildHistoryKey(rec), rec);
+        };
+        local.forEach(put);
+        incoming.forEach(put);
+        if (payload.status === "ok" && payload.data) put(payload.data);
+        const merged = Array.from(mergedMap.values());
+
+        persistHistory(merged);
+        renderHistory(merged, { animateNew: true });
     }
+
 
     function renderHistory(entries, options = {}) {
         const { animateNew = false } = options;
@@ -244,20 +290,22 @@
         const existingRows = new Map();
         historyBody.querySelectorAll('tr').forEach((row) => {
             const key = row.dataset.key;
+
             if (key) {
                 existingRows.set(key, row);
             }
         });
         const fragment = document.createDocumentFragment();
+
         let animationIndex = 0;
 
         ordered.forEach((record) => {
             if (!record) {
                 return;
             }
-            const key = [record.x, record.y, record.r, record.currentTime, record.processingTimeMs]
-                .map((value) => `${value ?? ''}`)
-                .join('|');
+
+            const key = buildHistoryKey(record);
+
             let row = existingRows.get(key);
             if (row) {
                 existingRows.delete(key);
@@ -266,10 +314,13 @@
             } else {
                 row = document.createElement('tr');
                 row.dataset.key = key;
+
                 if (animateNew) {
+
                     row.classList.add('history-row');
                     row.style.setProperty('--row-delay', `${Math.min(animationIndex, 6) * 60}ms`);
                     animationIndex += 1;
+
                 }
             }
             row.dataset.key = key;
@@ -288,11 +339,19 @@
         updatePlotPoints(ordered);
     }
 
+    function buildHistoryKey(record) {
+        return [record.x, record.y, record.r, record.currentTime, record.processingTimeMs]
+            .map((value) => `${value ?? ''}`)
+            .join('|');
+    }
+
     function updatePlotPoints(entries) {
         if (!pointsLayer) {
             return;
+
         }
         if (!Array.isArray(entries) || entries.length === 0) {
+
             pointsLayer.replaceChildren();
             return;
         }
@@ -303,7 +362,7 @@
         pointsLayer.replaceChildren(fragment);
     }
 
-function appendPlotPoint(fragment, record, isLatest) {
+    function appendPlotPoint(fragment, record, isLatest) {
         if (!record) {
             return;
         }
@@ -329,9 +388,10 @@ function appendPlotPoint(fragment, record, isLatest) {
         fragment.appendChild(circle);
     }
 
-function persistHistory(entries) {
+    function persistHistory(entries) {
         try {
             if (!Array.isArray(entries)) {
+
                 localStorage.removeItem(HISTORY_STORAGE_KEY);
                 return;
             }
@@ -349,11 +409,14 @@ function persistHistory(entries) {
         if (value === null || value === undefined) {
             return "—";
         }
+        if (typeof value === 'string') {
+            return escapeHtml(value);
+        }
         const number = Number(value);
         if (Number.isNaN(number)) {
             return escapeHtml(String(value));
         }
-        return Number(number.toFixed(6)).toString();
+        return number.toString();
     }
 
     function formatTimestamp(value) {
@@ -362,6 +425,7 @@ function persistHistory(entries) {
         }
         let normalized = typeof value === 'string' ? value.trim() : value;
         if (typeof normalized === 'string') {
+
             normalized = normalized.replace(/(\.\d{3})\d*(?=(Z|[+-]\d{2}:\d{2})?$)/, '$1');
         }
         const date = new Date(normalized);
@@ -381,10 +445,11 @@ function persistHistory(entries) {
     function escapeHtml(text) {
         return String(text)
             .replace(/&/g, "&amp;")
+
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;");
+
     }
 })();
-
