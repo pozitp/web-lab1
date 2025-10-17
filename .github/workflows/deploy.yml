@@ -47,6 +47,5 @@ jobs:
             daemon -r -f -p ~/run/app.pid -o ~/logs/app.log \
               java -DFCGI_PORT=8087 -XX:MaxHeapSize=1G -XX:MaxMetaspaceSize=128m \
               -jar ~/httpd-root/fcgi-bin/app.jar
-            exit
           EOF
 
