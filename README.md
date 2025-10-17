@@ -6,7 +6,7 @@
 ./gradlew build
 ```
 
-Готовый исполняемый jar: `build/libs/web-lab1-1.0-SNAPSHOT.jar`.
+Готовый исполняемый jar: `build/libs/labwork1.jar`.
 
 ## Запуск FastCGI сервера
 
@@ -16,7 +16,7 @@
 ```bash
 java \
   -DFCGI_PORT=9000 \
-  -cp "build/libs/web-lab1-1.0-SNAPSHOT.jar;lib/fastcgi-lib.jar" \
+  -cp "build/libs/labwork1.jar;lib/fastcgi-lib.jar" \
   ru.pozitp.Main
 ```
 
